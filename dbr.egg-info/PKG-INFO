@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: dbr
+Version: 0.1.0
+Summary: Sqlalchemy orm for interacting with an  DB.
+Description-Content-Type: text/markdown
+
+# dbr
+Python package to connect to database file, create editable excel report files, and allow a user to put their edited files back into the database to update it.

@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbr"
+description = "Sqlalchemy orm for interacting with an  DB."
+readme = "README.md"
+dependencies = [
+	"polars",
+	"SQLAlchemy>=2.0.19",
+]
+version = "0.1.0"
