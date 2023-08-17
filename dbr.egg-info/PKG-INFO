@@ -1,7 +1,11 @@
 Metadata-Version: 2.1
 Name: dbr
 Version: 0.1.0
-Summary: Sqlalchemy orm for interacting with an  DB.
+Summary: Database reporting and updating through excel
+Author-email: Jackson Balch <jrbalch543@yahoo.com>
+License: license
+Keywords: database
+Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 
 # dbr

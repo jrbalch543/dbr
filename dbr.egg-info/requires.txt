@@ -1,2 +1,2 @@
 polars
-SQLAlchemy>=2.0.19
+SQLAlchemy

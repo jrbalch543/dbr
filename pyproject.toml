@@ -4,10 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dbr"
-description = "Sqlalchemy orm for interacting with an  DB."
-readme = "README.md"
-dependencies = [
-	"polars",
-	"SQLAlchemy>=2.0.19",
+authors = [
+    {name = "Jackson Balch", email = "jrbalch543@yahoo.com"},
 ]
+description = "Database reporting and updating through excel"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["database"]
+license = {text = "license"}
+dependencies = [
+    "polars",
+    "SQLAlchemy",
+    ]
 version = "0.1.0"
+
+[tool.setuptools]
+py-modules = []
