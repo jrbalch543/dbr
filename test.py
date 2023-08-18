@@ -1,7 +1,8 @@
-from connection.create_engine import connect_to_engine
-from models.models import Base
-import models.base_reports as br
+from connection.create_engine import Engine
+from run.parse_args import parse
+from tasks.tasks import Dbr, run_cli_loop
 
-engine = connect_to_engine("/home/balch027/dbr/dbr/chinook.db")
-metadata = Base.metadata
-br.metadata_report(metadata)
+args = parse()
+engine = Engine(args.db_path)
+run_cli_loop(engine)
+# print(engine._base.metadata.tables['albums'].__dict__['_columns'])
