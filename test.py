@@ -5,4 +5,4 @@ from tasks.tasks import Dbr, run_cli_loop
 args = parse()
 engine = Engine(args.db_path)
 run_cli_loop(engine)
-# print(engine._base.metadata.tables['albums'].__dict__['_columns'])
+# print(engine._base.metadata.tables['tracks'].__dict__['primary_key'])

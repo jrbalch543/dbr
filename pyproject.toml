@@ -16,7 +16,11 @@ dependencies = [
     "polars",
     "SQLAlchemy",
     "xlsxwriter",
-    "cmd"
+    "cmd",
+    "tabulate",
+    "shutil",
+    "argparse",
+    "pandas"
     ]
 version = "0.1.0"
 

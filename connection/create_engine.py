@@ -3,10 +3,9 @@ import sqlalchemy as sql
 from models.models import Base
 
 class Engine():
-    def __init__(self, db_path, db_type="sqlite", existing_models=None) -> None:
+    def __init__(self, db_path, db_type="sqlite") -> None:
         self.db_path = db_path
         self.db_type = db_type
-        self.existing_models = existing_models
         self._base = Base
         self.connect_to_engine()
         
