@@ -5,6 +5,7 @@ from sqlalchemy.sql import text
 import pandas as pd
 from tabulate import tabulate
 from shutil import get_terminal_size
+import re
 
 pd.set_option('display.width', get_terminal_size()[0])
 
@@ -13,6 +14,7 @@ class Dbr(Cmd):
         self._engine = engine
         self.metadata = self._engine._base.metadata
         self.tables = self.metadata.tables
+        self.filter_options = [">", ">=", "<", "<=", "=", "!=", "like"]
         super().__init__()
 
     def do_q(self, *a, **k):
@@ -36,64 +38,90 @@ class Dbr(Cmd):
 
     def do_query_builder(self, *a, **k):
         """Build query for report"""
-        table = input("What table would you like to access?\n")
-        table_check = _asserter([table], self.tables)
-        if table_check:
+        table = self.get_value("What table would you like to access? Enter q to exit.\n", self.tables)[0]
+        if table:
             primary_keys = [c.name.lower() for c in self.tables[table].primary_key]
             table_cols = [c.name.lower() for c in self.tables[table].c if c.name.lower() not in primary_keys]
-            columns = input(f"What columns would you like to select?\nEnter * for all. \nOptions: {table_cols}\n")
-            columns = [col for col in columns.split(" ")]
-            if columns == ["*"]:
+            columns = self.get_value(f"What columns would you like to select?\nOptions: {table_cols}. Enter for all.\n", table_cols)
+            if not columns:
                 columns = table_cols
-            col_check = _asserter(columns, table_cols)
-            if col_check:
-                filters = []
-                self.filter_options = [">", ">=", "<", "<=", "=", "!=", "like"]
-                print(f"Would you like to filter any of {columns}?\n")
-                print(f"Options: {self.filter_options}\nSyntax: column filter value\n")
-                while True:
-                    filter = input()
-                    if filter != "":
-                        given = filter.split(" ")
-                        filters.append(given)
+            filters = []
+            print(f"""Would you like to filter any of {columns}?
+    Options: {self.filter_options}
+    Syntax: column filter value
+    Use column filter value [AND/OR] [NOT] column filter value ... to have dual+ condition, otherwise all conditions will be treated as all needing to be true.
+    Enter to skip.\n""")
+            while True:
+                filter = input()
+                if filter != "":
+                    if filter.startswith('(') and filter.endswith(')'):
+                        filters.append([filter])
                     else:
-                        break
-                query = self.build_sql_query(table, columns, filters)
-                with self._engine._engine.connect() as con:
-                    res = pd.read_sql(query, con=con)
-                    print(res)
-            else:
-                print("Those are not all valid columns.")
-                print(table_cols)
-
+                        multi_check = re.split(r"( and | or )", filter)
+                        if len(multi_check) > 1:
+                            filters += [clause.strip().lower().split(" ") for clause in multi_check]
+                        else:
+                            given = filter.lower().split(" ")
+                            filters.append(given)
+                else:
+                    break
+            # print(filters)
+            query = self.build_sql_query(table, columns, filters)
+            # print(query)
+            self.write_excel(query, table)
+            
         else:
             print("That is not an accepted table name. Please try again.\n")
             self.do_get_tables()
             self.do_query_builder()
 
+    def get_value(self, request_str, options):
+        val = input(request_str)
+        if val == "q" or val == "":
+            return
+        val = val.split(" ")
+        check, val = _asserter(val, options)
+        if check:
+            return val
+        else:
+            print(f"That choice is not one of the supported options: {options}")
+            self.get_value(request_str, options)
+
+
     def build_sql_query(self, table, columns, filters):
         stmt = f"""SELECT {", ".join(columns)} FROM {table}"""
         if filters != []:
-            stmt += " WHERE "
+            filter_stmt = ""
             for filter in filters:
-                col_exists = _asserter([filter[0]], columns)
-                if col_exists:
-                    filter_option_exists = _asserter([filter[1]], self.filter_options)
-                    if filter_option_exists:
-                        filter_stmt = f"""{' '.join(filter)}, """
-                        stmt += filter_stmt
-                    else:
-                        print(f"{filter[1]} is not a valid filter, skipping filter of {filter[0]}")
-                        continue
-                else:
-                    print(f"Did not select {filter[0]} as column, skipping filtering")
+                if filter[0].startswith("(") and filter[0].endswith(")"):
+                    filter_stmt = filter_stmt.rstrip(" AND ") + f"{filter[0]} AND "
                     continue
-        stmt.strip("WHERE")
+                if (filter == ['and'] or filter == ['or']):
+                    filter_stmt = filter_stmt.rstrip(" AND ") + f" {filter[0]} "
+                    continue
+                else:
+                    if filter[0] == 'not':
+                        filter_stmt += ' not '
+                        filter.pop(0)
+                    col_exists, val = _asserter([filter[0]], columns)
+                    if col_exists:
+                        filter_option_exists, val = _asserter([filter[1]], self.filter_options)
+                        if filter_option_exists:
+                            filter_stmt += f"""{' '.join(filter)} AND """
+                        else:
+                            print(f"{filter[1]} is not a valid filter, skipping filter of {filter[0]}")
+                            continue
+                    else:
+                        print(f"Did not select {filter[0]} as column, skipping filtering")
+                        continue
+            filter_stmt = filter_stmt.lower()
+            filter_stmt = filter_stmt.rstrip(" ")
+            filter_stmt = filter_stmt.rstrip("and")
+            filter_stmt = filter_stmt.rstrip("or")
+            filter_stmt = filter_stmt.rstrip("not")
+            stmt = stmt if filter_stmt == "" else stmt + " WHERE " + filter_stmt
+            stmt = stmt.strip("WHERE ")
         return stmt.rstrip(", ")
-
-            
-        
-
 
     def do_put(self):
         pass
@@ -104,13 +132,20 @@ class Dbr(Cmd):
     def do_edit_report(self):
         pass
 
+    def write_excel(self, query, report_name):
+        with self._engine._engine.connect() as con:
+            res = pd.read_sql(query, con=con)
+            res.to_excel(f"reports/{report_name}.xlsx")
+
 def _asserter(value, supposed_to):
     try:
         assert all([val in supposed_to for val in value])
-        return True
+        return True, value
     except AssertionError:
-        return False
-
+        if any([val in supposed_to for val in value]):
+            print(f"Options {[val for val in value if val not in supposed_to]} are not valid options")
+            return True, [val for val in value if val in supposed_to]
+        return False, None
 
 def run_cli_loop(engine):
     dbr = Dbr(engine=engine)
